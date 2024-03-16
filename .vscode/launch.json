@@ -1,0 +1,14 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python: KivyMD App",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "$diabetest app/mobileappfrontend.py",
+            "python": "$diabetest app/venv/bin/python",  // Path to your Python interpreter in the virtual environment
+            "env": {},
+            "console": "integratedTerminal"
+        }
+    ]
+}
