@@ -23,8 +23,7 @@ from kivy.metrics import dp
 root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir, os.pardir))
 sys.path.append(root_dir)
 
-from src.format.formatting import format_text, BLACK, GREEN, BLUE, WHITE, SMALL_SIZE, MEDIUM_SIZE, LARGE_SIZE
-
+from src.format.formatting import format_text, BLACK, GREEN, BLUE, RED, WHITE, SMALL_SIZE, MEDIUM_SIZE, LARGE_SIZE
 from kivy.core.text import LabelBase
 
 class TitlePage(Screen):
@@ -33,10 +32,11 @@ class TitlePage(Screen):
         layout = BoxLayout(orientation='vertical', spacing=20)
         title_label = Label(
             text=format_text('Welcome to\nDIABETEST!', color=BLACK, size=LARGE_SIZE),
-            font_name='FreeSansBold',
+            font_name='Times',
             size_hint_y=None,
-            height = 1000,
-            width = 100, 
+            halign='center',
+            height = 110,
+            width = 142, 
             markup=True
         )
         start_button = Button(
@@ -44,10 +44,11 @@ class TitlePage(Screen):
             size_hint=(None, None),
             size=(200, 50),
             background_color=(0.6, 0.8, 1, 1),
-            pos_hint={'center_x': 0.5, 'y': 0.3},
+            pos=(80, 450),
             markup=True
         )
         start_button.bind(on_release=self.go_to_consent)
+        
         layout.add_widget(title_label)
         layout.add_widget(start_button)
         self.add_widget(layout)
@@ -61,9 +62,9 @@ class ConsentPage(Screen):
         layout = BoxLayout(orientation='vertical', spacing=20)
         title_label = Label(
             text=format_text('User Consent', color=BLACK, size=LARGE_SIZE),
-            font_name='FreeSansBold',
+            font_name='Times',
             size_hint_y=None,
-            height = 50,
+            height = 30,
             width = 100, 
             markup=True
         )
@@ -99,7 +100,7 @@ class ConsentPage(Screen):
                              "confidentiality.", 
                     color=BLACK, 
                     size=SMALL_SIZE),
-            font_name='FreeSans',
+            font_name='Times',
             size_hint_y=None,
             height = 600,
             width = 100, 
@@ -128,6 +129,7 @@ class ConsentPage(Screen):
         layout.add_widget(consent_text)
         layout.add_widget(agree_button)
         layout.add_widget(back_button)
+        
         self.add_widget(layout)
 
     def go_to_upload(self, instance):
@@ -139,60 +141,95 @@ class ConsentPage(Screen):
 class UploadPage(Screen):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        layout = FloatLayout(size=(360, 640))
+        self.layout = BoxLayout(orientation='vertical', spacing=20)
+
+        self.error_label = Label(
+            text=format_text(text='Error: please upload a facial image', color=RED),
+            size_hint_y=None,
+            height=dp(20),
+            opacity=0  # Initially hidden
+        )
+
         title_label = Label(
             text=format_text('Upload Image', color=BLACK, size=LARGE_SIZE),
-            font_name='FreeSansBold',
             size_hint_y=None,
-            pos_hint={'center_x': 0.5, 'top': 0.9},
+            height=dp(50),
             markup=True
         )
         upload_button = Button(
-            text=format_text('Choose Photo', size = SMALL_SIZE, color=WHITE), 
-            size_hint=(None, None),  
-            pos_hint={'center_x': 0.5, 'center_y': 0.6}, 
+            text=format_text('Choose Photo', size=SMALL_SIZE, color=WHITE),
+            size_hint_y=None,
+            height=dp(50),
             background_color=(0.6, 0.8, 1, 1),
-            size=(200, 50),
             markup=True
         )
-        
         upload_button.bind(on_release=self.choose_photo)
-        submit_button = Button(
-            text=format_text('Submit', size = SMALL_SIZE, color=WHITE),
-            size_hint=(None, None), 
-            size=(200, 50), 
-            pos_hint={'center_x': 0.5, 'y': 0.05}, 
-            background_color=(0.6, 0.8, 1, 1),
-            markup=True
-        )
 
         back_button = Button(
-            size_hint=(None, None), 
-            size=(50, 50), 
-            pos=(0, 750), 
-            background_normal='circle.png', 
-            background_down='circle.png'
+            text='Back',
+            size_hint_y=None,
+            height=dp(50),
+            background_color=(1, 0.6, 0.6, 1)
         )
         back_button.bind(on_release=self.go_back)
 
-        layout.add_widget(title_label)
-        layout.add_widget(upload_button)
-        layout.add_widget(submit_button)
-        layout.add_widget(back_button)
-        self.add_widget(layout)
+        self.submit_button = Button(
+            text=format_text('Submit', size=SMALL_SIZE, color=WHITE),
+            size_hint_y=None,
+            height=dp(50),
+            background_color=(0.6, 0.8, 1, 1),
+            markup=True,
+            disabled=True  # Initially disabled
+        )
+        self.submit_button.bind(on_release=self.go_to_processing)
+
+        self.layout.add_widget(title_label)
+        self.layout.add_widget(upload_button)
+        self.layout.add_widget(self.submit_button)
+        self.layout.add_widget(self.error_label)
+        self.layout.add_widget(back_button)
+
+        self.add_widget(self.layout)
 
     def choose_photo(self, instance):
-        file_chooser = FileChooserListView()
+        file_chooser = FileChooserListView(filters=['*.jpg', '*.jpeg', '*.png'])
+        file_chooser.bind(on_submit=lambda instance, value: self.on_file_selected(instance, value))  # Use lambda to pass arguments correctly
         popup = Popup(title='Choose Photo', content=file_chooser, size_hint=(None, None), size=(400, 400))
-        file_chooser.bind(on_submit=self.dismiss_popup)
         popup.open()
 
-    def dismiss_popup(self, instance):
-        popup = instance.parent.parent
-        popup.dismiss()
+    def on_file_selected(self, instance, value):
+        if value:
+            self.submit_button.disabled = False
+            self.error_label.opacity = 0  # Hide error message
+        else:
+            self.submit_button.disabled = True
+            self.error_label.opacity = 1  # Show error message
+
+    def go_to_processing(self, instance):
+        if not self.submit_button.disabled:
+            self.manager.current = 'processing'
+        else:
+            # Show error message or handle the case where no file is selected
+            pass
 
     def go_back(self, instance):
         self.manager.current = 'consent'
+
+
+class ProcessingPage(Screen):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        layout = BoxLayout(orientation='vertical', spacing=20)
+        processing_label = Label(
+            text=format_text('Your photo is being processed...\nPlease wait', color=BLACK, size=MEDIUM_SIZE),
+            font_name='Times',
+            size_hint_y=None,
+            height=dp(100),
+            markup=True
+        )
+        layout.add_widget(processing_label)
+        self.add_widget(layout)
+
 
 class MyApp(MDApp):
     def build(self):
@@ -201,6 +238,7 @@ class MyApp(MDApp):
         sm.add_widget(TitlePage(name='title'))
         sm.add_widget(ConsentPage(name='consent'))
         sm.add_widget(UploadPage(name='upload'))
+        sm.add_widget(ProcessingPage(name='processing'))
 
         # Create a BoxLayout with a gray background
         root = BoxLayout(orientation='vertical', size=(360, 640))
@@ -218,6 +256,7 @@ class MyApp(MDApp):
     
 
 if __name__ == '__main__':
-    LabelBase.register(name='FreeSansBold', fn_regular=r'C:\Users\ASUS\OneDrive\Documents\diabetes app\assets\fonts\FreeSansBold.ttf')
-    LabelBase.register(name='FreeSans', fn_regular=r'C:\Users\ASUS\OneDrive\Documents\diabetes app\assets\fonts\FreeSans.ttf')
+    #LabelBase.register(name='FreeSansBold', fn_regular=r'C:\Users\ASUS\OneDrive\Documents\diabetes app\assets\fonts\FreeSansBold.ttf')
+    #LabelBase.register(name='FreeSans', fn_regular=r'C:\Users\ASUS\OneDrive\Documents\diabetes app\assets\fonts\FreeSans.ttf')
+    LabelBase.register(name='Times', fn_regular=r'C:\Users\ASUS\OneDrive\Documents\diabetes app\assets\fonts\Times New Roman.ttf')
     MyApp().run()
