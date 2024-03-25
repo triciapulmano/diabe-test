@@ -28,7 +28,7 @@ def load_images_from_folder(folder):
             images.append(img)
     return images
 
-
+"""
 def detect_eyes(gray_face):
     eyes = eye_cascade.detectMultiScale(gray_face, scaleFactor=1.3, minNeighbors=5)
     return eyes
@@ -57,7 +57,7 @@ def segment_blocks(image, eyes):
     print("Cheek size:", cheek.shape)
 
     return forehead, nose_bridge, cheek
-
+"""
 
 # Function to resize an image to a specific size
 def resize_image(image, size):

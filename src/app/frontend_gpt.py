@@ -28,17 +28,20 @@ class TitlePage(Screen):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         layout = BoxLayout(orientation='vertical', spacing=dp(10))
+
         title_label = MDLabel(
             text=format_text('Welcome to\nDIABETEST!', color=BLACK, size=LARGE_SIZE),
             font_style='H2',
             halign='center',
-            markup=True
+            markup=True,
+            pos_hint={'center_x': 0.5, 'top': 0.9} 
         )
+    
         start_button = MDRaisedButton(
             text=format_text('Get Started', color=WHITE),
             size_hint=(None, None),
             size=(dp(200), dp(50)),
-            pos_hint={'center_x': 0.5},
+            pos_hint={'center_x': 0.5, 'top': 1},  
             md_bg_color=GREEN,
             on_release=self.go_to_consent
         )

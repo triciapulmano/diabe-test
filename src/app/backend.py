@@ -1,78 +1,47 @@
 import cv2
+from mtcnn import MTCNN
 import numpy as np
-import matplotlib.pyplot as plt
 
-def extract_facial_blocks(image_path, block_size=(100, 100)):
-    # Load the image
-    image = cv2.imread(image_path)
+# Load the MTCNN face detector
+detector = MTCNN()
 
-    # Convert the image to grayscale
-    gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+# Load the input image
+image = cv2.imread(r"C:\Users\ASUS\OneDrive\Documents\Facial Images\Nondiabetics\20240118_142551 - Ray Angelo Pulmano.jpg")  # Replace "path/to/your/image.jpg" with the actual path to your image
 
-    # Face detection using Haarcascades (you may need to adjust the path)
-    face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
-    faces = face_cascade.detectMultiScale(gray_image, scaleFactor=1.3, minNeighbors=5)
+# Convert the image to RGB format (MTCNN requires RGB images)
+image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
-    facial_blocks = []
+# Detect faces and facial landmarks using MTCNN
+detections = detector.detect_faces(image_rgb)
 
-    for (x, y, w, h) in faces:
-        # Extract left cheek block
-        left_cheek_block = gray_image[y:y + h, x:x + w // 3]
-        left_cheek_block = cv2.resize(left_cheek_block, block_size)
+if detections:
+    # Assume only one face is detected for simplicity (you can modify for multiple faces)
+    face = detections[0]['box']  # Get bounding box coordinates of the face
+    keypoints = detections[0]['keypoints']  # Get facial keypoints
 
-        # Extract nose bridge block
-        nose_bridge_block = gray_image[y:y + h // 2, x + w // 4:x + 3 * w // 4]
-        nose_bridge_block = cv2.resize(nose_bridge_block, block_size)
+    # Extract forehead (with eyebrows) and nose (with left and right cheek) if the keypoints are available
+    if 'left_eyebrow' in keypoints and 'right_eyebrow' in keypoints:
+        forehead_x1, forehead_y1 = keypoints['left_eyebrow']
+        forehead_x2, forehead_y2 = keypoints['right_eyebrow']
+        forehead = image[forehead_y1:forehead_y2, forehead_x1:forehead_x2]
+        forehead_resized = cv2.resize(forehead, (72, 24))
+        cv2.imshow("Forehead", forehead_resized)
+    else:
+        print("Left or right eyebrow keypoint not found.")
 
-        # Extract forehead block
-        forehead_block = gray_image[y:y + h // 4, x:x + w]
-        forehead_block = cv2.resize(forehead_block, block_size)
+    if 'nose' in keypoints and 'right_cheek' in keypoints:
+        nose_x1, nose_y1 = keypoints['nose']
+        nose_x2, nose_y2 = keypoints['right_cheek']
+        nose = image[nose_y1:nose_y2, nose_x1:nose_x2]
+        nose_resized = cv2.resize(nose, (72, 24))
+        cv2.imshow("Nose", nose_resized)
+    else:
+        print("Nose or right cheek keypoint not found.")
 
-        facial_blocks.append((left_cheek_block, nose_bridge_block, forehead_block))
+    cv2.waitKey(0)
+else:
+    print("No face detected in the image.")
 
-    return facial_blocks
+# Close all OpenCV windows
+cv2.destroyAllWindows()
 
-def apply_gabor_filter(image):
-    # Apply Gabor filter to the image
-    kernel = cv2.getGaborKernel((21, 21), 5.0, 1.0, 10.0, 0.5, 0, ktype=cv2.CV_32F)
-    gabor_filtered = cv2.filter2D(image, cv2.CV_8UC3, kernel)
-
-    return gabor_filtered
-
-def display_results(facial_blocks):
-    for i, (left_cheek_block, nose_bridge_block, forehead_block) in enumerate(facial_blocks):
-        # Apply Gabor filter to each facial block
-        left_cheek_texture = apply_gabor_filter(left_cheek_block)
-        nose_bridge_texture = apply_gabor_filter(nose_bridge_block)
-        forehead_texture = apply_gabor_filter(forehead_block)
-
-        # Display original and Gabor-filtered images
-        plt.subplot(3, 4, i * 4 + 1), plt.imshow(left_cheek_block, cmap='gray')
-        plt.title('Left Cheek Block'), plt.xticks([]), plt.yticks([])
-
-        plt.subplot(3, 4, i * 4 + 2), plt.imshow(left_cheek_texture, cmap='gray')
-        plt.title('Left Cheek Texture'), plt.xticks([]), plt.yticks([])
-
-        plt.subplot(3, 4, i * 4 + 3), plt.imshow(nose_bridge_block, cmap='gray')
-        plt.title('Nose Bridge Block'), plt.xticks([]), plt.yticks([])
-
-        plt.subplot(3, 4, i * 4 + 4), plt.imshow(nose_bridge_texture, cmap='gray')
-        plt.title('Nose Bridge Texture'), plt.xticks([]), plt.yticks([])
-
-        plt.subplot(3, 4, i * 4 + 5), plt.imshow(forehead_block, cmap='gray')
-        plt.title('Forehead Block'), plt.xticks([]), plt.yticks([])
-
-        plt.subplot(3, 4, i * 4 + 6), plt.imshow(forehead_texture, cmap='gray')
-        plt.title('Forehead Texture'), plt.xticks([]), plt.yticks([])
-
-    plt.show()
-
-if __name__ == '__main__':
-    # Specify the path to your image
-    image_path = r'C:\Users\ASUS\OneDrive\Documents\_facialsample.png'
-
-    # Extract facial blocks and apply Gabor filter
-    facial_blocks = extract_facial_blocks(image_path, block_size=(100, 100))
-
-    # Display the results
-    display_results(facial_blocks)
