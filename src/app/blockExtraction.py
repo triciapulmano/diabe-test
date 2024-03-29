@@ -1,4 +1,4 @@
-# import the necessary packages
+# https://github.com/raviranjan0309/Detect-Facial-Features/blob/master/detect_face_features.py
 from collections import OrderedDict
 import os
 import numpy as np
@@ -6,9 +6,14 @@ import cv2
 import dlib
 import imutils
 
-input_dir = r'C:\Users\ASUS\OneDrive\Documents\Facial Images\Nondiabetics'
-output_dir = r"C:\Users\ASUS\OneDrive\Documents\Facial Images\blocks_nondiabetic"
-os.makedirs(output_dir, exist_ok=True)
+input_dirs = [ r'C:\Users\ASUS\OneDrive\Documents\Facial Images\Nondiabetics', 
+              r'c:\Users\ASUS\OneDrive\Documents\Facial Images\Diabetics']
+
+output_dirs = [ r'C:\Users\ASUS\OneDrive\Documents\Facial Images\blocks_nondiabetic',
+              r'C:\Users\ASUS\OneDrive\Documents\Facial Images\blocks_diabetic']
+
+for output_dir in output_dirs:
+    os.makedirs(output_dir, exist_ok=True)
 
 facial_features_cordinates = {}
 
@@ -23,7 +28,6 @@ FACIAL_LANDMARKS_INDEXES = OrderedDict([
     ("Nose", (27, 35)),
     ("Jaw", (0, 17))
 ])
-
 
 
 def shape_to_numpy_array(shape, dtype="int"):
@@ -88,16 +92,16 @@ predictor = dlib.shape_predictor(r"C:\Users\ASUS\OneDrive\Documents\diabetes app
 
 def block_extraction(point, img):
     # nose block center = point[29]
-    height = int(point[31][1] - point[28][1])
+    height = int(point[30][1] - point[28][1])
     width = height
 
     nose = img[int(point[29][1]-(height/2)):int(point[29][1]+(height/2)), int(point[29][0]-(width/2)):int(point[29][0]+(width/2))]
     cv2.imwrite(os.path.join(output_dir, f"{filename}_nose.jpg"), nose)
 
     # right cheek
-    # point[47] x-coordinate of center 
-    r_centery = int(point[46][1]) + int(height / 2)
-    r_centerx = int(point[46][0])
+    # point[46] x-coordinate of center 
+    r_centery = int(point[45][1]) + int(height / 0.9)
+    r_centerx = int(point[45][0])
 
     # Calculate the integer values for slicing indices
     r_left = r_centerx - int(width / 2)
@@ -109,8 +113,8 @@ def block_extraction(point, img):
     cv2.imwrite(os.path.join(output_dir, f"{filename}_right.jpg"), right)
 
     # left cheek, point[41] x-coordinate of center
-    l_centery = int(point[41][1]) + int(height / 2)
-    l_centerx = int(point[41][0])
+    l_centery = int(point[37][1]) + int(height / 0.7)
+    l_centerx = int(point[37][0])
 
     # Calculate the integer values for slicing indices
     l_left = l_centerx - int(width / 2)
@@ -139,34 +143,34 @@ def block_extraction(point, img):
     else:
         print("Empty forehead image. Skipping writing.")
 
-# Iterate through all image files in the input directory
-for filename in os.listdir(input_dir):
-    # Check if the file is an image (you can adjust the extensions as needed)
-    if filename.lower().endswith(('.jpg', '.jpeg', '.png', '.bmp')):
-        image_path = os.path.join(input_dir, filename)
+for input_dir, output_dir in zip(input_dirs, output_dirs):
+    # Iterate through all image files in the current input directory
+    for filename in os.listdir(input_dir):
+        if filename.lower().endswith(('.jpg', '.jpeg', '.png', '.bmp')):
+            image_path = os.path.join(input_dir, filename)
 
-        # Load the input image, resize it, and convert it to grayscale
-        img = cv2.imread(image_path)
-        img = imutils.resize(img, width=500)
-        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+            # Load the input image, resize it, and convert it to grayscale
+            img = cv2.imread(image_path)
+            img = imutils.resize(img, width=768, height=1024)
+            gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
-        # Detect faces in the grayscale image
-        rects = detector(gray, 1)
+            # Detect faces in the grayscale image
+            rects = detector(gray, 1)
 
-        # Initialize an empty NumPy array to store the facial landmarks
-        point = np.zeros((68, 2), dtype=int)
+            # Initialize an empty NumPy array to store the facial landmarks
+            point = np.zeros((68, 2), dtype=int)
 
-        # Loop over the face detections
-        for (i, rect) in enumerate(rects):
-            # Determine the facial landmarks for the face region
-            shape = predictor(gray, rect)
+            # Loop over the face detections
+            for (i, rect) in enumerate(rects):
+                # Determine the facial landmarks for the face region
+                shape = predictor(gray, rect)
 
-            # Loop over the 68 facial landmarks and store each (x, y) coordinate
-            for j in range(0, 68):
-                x = shape.part(j).x
-                y = shape.part(j).y
-                point[j] = (x, y)
+                # Loop over the 68 facial landmarks and store each (x, y) coordinate
+                for j in range(0, 68):
+                    x = shape.part(j).x
+                    y = shape.part(j).y
+                    point[j] = (x, y)
 
-            # Perform block extraction using the block_extraction function
-            block_extraction(point, img)
+                # Perform block extraction using the block_extraction function
+                block_extraction(point, img)
 
