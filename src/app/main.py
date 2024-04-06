@@ -19,7 +19,7 @@ from kivy.metrics import dp
 from kivymd.uix.snackbar import Snackbar
 
 from blockExtraction import face_detection
-from gabor import get_image_feature_vector
+from gabor import preprocess_image, extract_gabor_features
 from server import process_features
 
 root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir, os.pardir))
@@ -38,14 +38,14 @@ class TitlePage(Screen):
             font_style='H2',
             halign='center',
             markup=True,
-            pos_hint={'center_x': 0.5, 'top': 0.9} 
+            pos_hint={"center_x": 0.5, "center_y": 0.9} 
         )
     
         start_button = MDRaisedButton(
             text=format_text('Get Started', color=WHITE),
             size_hint=(None, None),
             size=(dp(200), dp(50)),
-            pos_hint={'center_x': 0.5, 'top': 1},  
+            pos_hint={'center_x': 0.5, 'center_y': 1},  
             md_bg_color=GREEN,
             on_release=self.go_to_consent
         )
@@ -214,7 +214,8 @@ class UploadPage(Screen):
         self.popup.dismiss()  # Close the popup
     
     def on_submit(self, instance):
-        if self.file_chooser and self.file_chooser.selection:
+        print(self.file_chooser, self.file_chooser.selection)
+        if self.file_chooser.selection:
             selected_file = self.file_chooser.selection[0]
             self.process_image(selected_file)
         else:
@@ -222,18 +223,33 @@ class UploadPage(Screen):
 
 
     def process_image(self, selected_file):
+
+        with open(selected_file, 'rb') as file:
+            selected_file = file.read()
+
         if selected_file is not None: 
             blocks = [] 
             blocks = face_detection(selected_file)
+
+            save_path = r"D:\downloads dump\test"  
+            os.makedirs(save_path, exist_ok=True)  
+
             # Perform Gabor filter and texture analysis for each block
             texture_features = []
-            for block in blocks:
-                features = get_image_feature_vector(block)
-                texture_features.append(features)
+            for i, block in enumerate(blocks):
+                for j, chunk in enumerate(block):
+                    filename = os.path.join(save_path, f'block_{i}_{j}.jpg')
+                    cv2.imwrite(filename, chunk)
+                    grayscale = preprocess_image(filename)
+                    features = extract_gabor_features(grayscale)
+                    texture_features.append(features)
+
+            print(texture_features)
+
             # Send texture features to the server for classification
-            url = 'http://127.0.0.1:5000/'  # Update URL with your server's address
+            url = 'http://127.0.0.1:5000/process_features'  # Update URL with your server's address
             data = {'features': texture_features}
-            response = requests.post(url, json=data)
+            response = requests.get(url, json=data)
 
             if response.status_code == 200:
                 prediction = response.json()['prediction']

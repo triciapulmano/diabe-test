@@ -113,10 +113,8 @@ def block_extraction(point, img):
     height = int(point[30][1] - point[28][1])
     width = height
 
-
     nose = img[int(point[29][1]-(height/2)):int(point[29][1]+(height/2)), int(point[29][0]-(width/2)):int(point[29][0]+(width/2))]
     cv2.imwrite(os.path.join(output_dir, f"{filename}_nose.jpg"), nose)
-
 
     # right cheek
     # point[46] x-coordinate of center

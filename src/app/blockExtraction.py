@@ -103,8 +103,8 @@ def block_extraction(point, img):
     width = height
 
     nose = img[int(point[29][1]-(height/2)):int(point[29][1]+(height/2)), int(point[29][0]-(width/2)):int(point[29][0]+(width/2))]
-    blocks.append(nose)
 
+    """
     # right cheek
     # point[46] x-coordinate of center 
     r_centery = int(point[45][1]) + int(height / 0.9)
@@ -117,7 +117,7 @@ def block_extraction(point, img):
     r_bottom = r_centery + int(height / 2)
 
     right = img[r_top:r_bottom, r_left:r_right]
-    blocks.append(right)
+    """
 
     # left cheek, point[41] x-coordinate of center
     l_centery = int(point[37][1]) + int(height / 0.7)
@@ -130,7 +130,6 @@ def block_extraction(point, img):
     l_bottom = l_centery + int(height / 2)
 
     left = img[l_top:l_bottom, l_left:l_right]
-    blocks.append(left)
 
     # forehead
     min_y = min(point[19][1], point[24][1])
@@ -144,11 +143,16 @@ def block_extraction(point, img):
     f_bottom = f_centery + int(height / 2)
 
     forehead = img[f_top:f_bottom, f_left:f_right]
+    
     blocks.append(forehead)
+    blocks.append(left)
+    blocks.append(nose)
+    # blocks.append(right)
 
     return blocks
 
 def face_detection(image_data):
+    blocks = []
     img = load_image(image_data)
     if img is not None:
         resized_img = resize_image(img, width=768, height=1024)
@@ -162,6 +166,10 @@ def face_detection(image_data):
                     x = shape.part(j).x
                     y = shape.part(j).y
                     point[j] = (x, y)
-                        
-                    block_extraction(point, resized_img)
-            
+                
+                a =  block_extraction(point, resized_img)
+                blocks.append(a)
+    
+    return blocks
+
+                    

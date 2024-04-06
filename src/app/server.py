@@ -4,11 +4,21 @@ import numpy as np
 import pickle
 
 app = Flask(__name__)
+# Get the directory of the current script
+current_dir = os.path.dirname(os.path.abspath(__file__))
 
-with open(r'src\app\model.pkl', 'rb') as file:
+# Specify the filename you want to open (replace 'filename.txt' with your actual filename)
+filename = 'svm_model.pkl'
+
+# Construct the full path to the file
+file_path = os.path.join(current_dir, filename)
+
+# Open the file using a with statement
+with open(file_path, 'rb') as file:
+    # Perform operations with the file
     model = pickle.load(file)
 
-@app.route('/process_features', methods=['POST'])
+@app.route('/process_features', methods=['GET'])
 def process_features():
     # Get the features from the request
     features = request.json['features']

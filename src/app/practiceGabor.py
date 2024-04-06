@@ -1,77 +1,89 @@
+import os
 import cv2
 import numpy as np
-import os
 import csv
-from scipy.stats import kurtosis, skew, entropy
+from skimage.filters import gabor
 
-def compute_texture_features(img):
-    # Compute mean, variance, kurtosis, std, entropy, and skewness
-    mean_value = np.mean(img)
-    variance_value = np.var(img)
-    # Check if variance is non-zero before computing kurtosis and skewness
-    if variance_value > 0:
-        kurtosis_value = kurtosis(img.flatten())
-        skewness_value = skew(img.flatten())
-    else:
-        # Set kurtosis and skewness to NaN (Not a Number) if variance is zero
-        kurtosis_value = np.nan
-        skewness_value = np.nan
+# Function to load facial images from a directory
+def load_images_from_folder(folder_path):
+    images = []
+    for filename in os.listdir(folder_path):
+        img_path = os.path.join(folder_path, filename)
+        if os.path.isfile(img_path):
+            read_img = cv2.imread(img_path)
+            resized_image = cv2.resize(read_img, (100, 100))
+            img = cv2.cvtColor(resized_image, cv2.COLOR_BGR2GRAY)
+            if img is not None:
+                images.append(img)
+    return images
 
-    std_value = np.std(img)
-    entropy_value = entropy(np.histogramdd(img.flatten(), bins=256)[0])
+"""
+# Function to extract Gabor features from images
+def extract_gabor_features(images, scales=5, orientations=8):
+    feature_vectors = []
+    for img in images:
+        gabor_features = []
+        for scale in range(scales):
+            scale_responses = []
+            for orientation in range(orientations):
+                gabor_filter_bank = gabor(img, frequency=0.6, theta=(orientation / orientations) * np.pi,
+                                          bandwidth=1, sigma_x=1, sigma_y=1, n_stds=3, offset=0)
+                gabor_response = np.abs(gabor_filter_bank)
+                scale_responses.append(np.mean(gabor_response))
+            gabor_features.append(np.mean(scale_responses))
+        feature_vectors.append(np.mean(gabor_features))
+    return np.array(feature_vectors)
+"""
     
-    return mean_value, variance_value, kurtosis_value, std_value, entropy_value, skewness_value
+# Function to extract Gabor features from an image
+def extract_gabor_features(images):
+    feature_vectors = []
+    for img in images:
+        # Define parameters for Gabor filters
+        sigmas = [1, 2, 3, 4, 5]
+        lambdas = [0, np.pi/4, np.pi/2, 3*np.pi/4, np.pi, 5*np.pi/4, 3*np.pi/2, 7*np.pi/4]
+        orientations = [0, 1, 2, 3, 4, 5, 6, 7]  # Corresponding to 0°, 45°, 90°, 135°, 180°, 225°, 270°, 315°
 
-def apply_gabor_filter(image, ksize=31, sigma=5, theta=0, lam=10, gamma=0.5):
-    # Convert the image to grayscale if it's in color
-    if len(image.shape) == 3:
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        # Initialize list to store texture values
+        texture_values = []
 
-    # Apply Gabor filter
-    gabor_kernel = cv2.getGaborKernel((ksize, ksize), sigma, theta, lam, gamma, 0, ktype=cv2.CV_32F)
-    filtered_image = cv2.filter2D(image, cv2.CV_8UC3, gabor_kernel)
+        # Iterate over combinations of parameters
+        for sigma in sigmas:
+            for theta in orientations:
+                # Check if lambda[theta] is zero to avoid division by zero
+                if lambdas[theta] != 0:
+                    # Create Gabor filter
+                    gabor_kernel = cv2.getGaborKernel((39, 39), sigma, theta*np.pi/8, 1/lambdas[theta], 0.5, 0, ktype=cv2.CV_32F)
+                    
+                    # Convolve image with Gabor filter
+                    filtered_image = cv2.filter2D(img, cv2.CV_64F, gabor_kernel)
+                    
+                    # Compute mean of filtered image as texture value
+                    texture_value = np.mean(filtered_image)
+                    texture_values.append(texture_value)
 
-    return filtered_image
+        # Calculate the average texture value
+        average_texture_value = np.mean(texture_values)
+        feature_vectors.append(average_texture_value)
+    
+    return np.array(feature_vectors)
 
-# Directory containing images
-images_dir = r"C:\Users\ASUS\OneDrive\Documents\Facial Images\blocks_diabetic"
 
-# Output CSV file path
+def write_gabor_features_to_csv(filename, feature_vectors):
+    with open(filename, mode='w', newline='') as file:
+        writer = csv.writer(file)
+        for idx in range(0, len(feature_vectors), 4):
+            writer.writerow(feature_vectors[idx:idx + 4])
+
+# Directory containing facial images
+facial_images_dir = r"C:\Users\ASUS\OneDrive\Documents\Facial Images\blocks_nondiabetic" 
+
+# Load facial images from the directory
+facial_images = load_images_from_folder(facial_images_dir)
+
+# Extract Gabor features from facial images with 5 scales and 8 orientations
+gabor_features = extract_gabor_features(facial_images)
+
+# Write Gabor features to CSV file
 output_csv_file = r"C:\Users\ASUS\OneDrive\Documents\Facial Images\featureVectors.csv"
-
-# List to store texture features for all images
-texture_features_list = []
-
-# Loop through each image in the directory
-for i, filename in enumerate(os.listdir(images_dir)):
-    if filename.endswith(('.jpg', '.png', '.jpeg')):  # Check if the file is an image
-        # Load the image
-        image_path = os.path.join(images_dir, filename)
-        image = cv2.imread(image_path)
-
-        # Apply Gabor filter
-        filtered_image = apply_gabor_filter(image)
-
-        # Compute texture features from the filtered image
-        mean_val, var_val, kurt_val, std_val, entropy_val, skew_val = compute_texture_features(filtered_image)
-
-        # Append texture features to the list
-        texture_features_list.append([filename, mean_val, var_val, kurt_val, std_val, entropy_val, skew_val])
-
-        # Write to CSV file every 4 images
-        if (i + 1) % 4 == 0:
-            with open(output_csv_file, 'a', newline='') as csv_file:
-                writer = csv.writer(csv_file)
-                # Write texture features for each image
-                writer.writerows(texture_features_list)
-            # Clear the list for the next batch of images
-            texture_features_list = []
-
-# If there are remaining images in the list, write them to the CSV file
-if texture_features_list:
-    with open(output_csv_file, 'a', newline='') as csv_file:
-        writer = csv.writer(csv_file)
-        # Write texture features for remaining images
-        writer.writerows(texture_features_list)
-
-print("Texture features saved to:", output_csv_file)
+write_gabor_features_to_csv(output_csv_file, gabor_features)
