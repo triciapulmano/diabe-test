@@ -18,6 +18,9 @@ from kivy.graphics import Color, Rectangle
 from kivy.metrics import dp
 from kivymd.uix.snackbar import Snackbar
 
+# from android.permissions import request_permissions, Permission
+# from android.storage import primary_external_storage_path
+
 from blockExtraction import face_detection
 from gabor import preprocess_image, extract_gabor_features
 from server import process_features
@@ -38,14 +41,14 @@ class TitlePage(Screen):
             font_style='H2',
             halign='center',
             markup=True,
-            pos_hint={"center_x": 0.5, "center_y": 0.9} 
+            pos_hint={"center_x": 0.5, "center_y": 0.8} 
         )
     
         start_button = MDRaisedButton(
             text=format_text('Get Started', color=WHITE),
             size_hint=(None, None),
             size=(dp(200), dp(50)),
-            pos_hint={'center_x': 0.5, 'center_y': 1},  
+            pos_hint={'center_x': 0.5, 'center_y': 0.25},  
             md_bg_color=GREEN,
             on_release=self.go_to_consent
         )
@@ -54,6 +57,7 @@ class TitlePage(Screen):
         layout.add_widget(start_button)
         self.add_widget(layout)
 
+    
     def go_to_consent(self, instance):
         self.manager.current = 'consent'
 
@@ -61,6 +65,8 @@ class ConsentPage(Screen):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         layout = BoxLayout(orientation='vertical', spacing=dp(10))
+        
+        
         title_label = MDLabel(
             text=format_text('User Consent', color=BLACK, size=LARGE_SIZE),
             font_style='H2',
@@ -89,20 +95,6 @@ class ConsentPage(Screen):
             )
             text_container.add_widget(consent_label)
         
-        consent_text = MDLabel(
-            text=format_text("Diabe-test is an application for early type 2\n"
-                             "diabetes for those within 21-40 years old. Using\n"
-                             "this application requires the user to upload a\n"
-                             "facial image. Rest assured that all data obtained\n"
-                             "will be handled with utmost privacy and\n"
-                             "confidentiality.", 
-                    color=BLACK, 
-                    size=SMALL_SIZE),
-            font_style='Body1',
-            size_hint_y=None,
-            height=dp(600),
-            markup=True
-        )
         agree_button = MDRaisedButton(
             text=format_text('I Agree', size=SMALL_SIZE, color=WHITE),
             size_hint=(None, None),
@@ -123,10 +115,8 @@ class ConsentPage(Screen):
         
         layout.add_widget(title_label)
         layout.add_widget(text_container)
-        layout.add_widget(consent_text)
         layout.add_widget(agree_button)
         layout.add_widget(back_button)
-        
         self.add_widget(layout)
 
     def go_to_upload(self, instance):
@@ -138,7 +128,7 @@ class ConsentPage(Screen):
 class UploadPage(Screen):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.layout = BoxLayout(orientation='vertical', spacing=20)
+        self.layout = BoxLayout(orientation='vertical', spacing=dp(10))
         self.image_data = None  # Variable to store image data
         self.file_chooser = None 
         self.error_label = Label(text='', color=(1, 0, 0, 1))  # Error label with red color
@@ -150,29 +140,31 @@ class UploadPage(Screen):
             height=dp(50),
             markup=True
         )
-        upload_button = Button(
+
+        upload_button = MDRaisedButton(
             text=format_text('Choose Photo', size=SMALL_SIZE, color=WHITE),
-            size_hint_y=None,
-            height=dp(50),
-            background_color=(0.6, 0.8, 1, 1),
-            markup=True
+            size_hint=(None, None),
+            size=(dp(200), dp(50)),
+            pos_hint={'center_x': 0.5},
+            md_bg_color=GREEN
         )
         upload_button.bind(on_release=self.choose_photo)
 
-        back_button = Button(
-            text='Back',
-            size_hint_y=None,
-            height=dp(50),
-            background_color=(1, 0.6, 0.6, 1)
+        back_button = MDRaisedButton(
+            text=format_text('Back', size=SMALL_SIZE, color=WHITE),
+            size_hint=(None, None),
+            size=(dp(200), dp(50)),
+            pos_hint={'center_x': 0.5},
+            md_bg_color=RED
         )
         back_button.bind(on_release=self.go_back)
-
-        self.submit_button = Button(
+        
+        self.submit_button = MDRaisedButton(
             text=format_text('Submit', size=SMALL_SIZE, color=WHITE),
-            size_hint_y=None,
-            height=dp(50),
-            background_color=(0.6, 0.8, 1, 1),
-            markup=True,
+            size_hint=(None, None),
+            size=(dp(200), dp(50)),
+            pos_hint={'center_x': 0.5},
+            md_bg_color=BLUE,
             disabled=True  # Initially disabled
         )
         self.submit_button.bind(on_release=self.on_submit)
@@ -183,6 +175,10 @@ class UploadPage(Screen):
         self.layout.add_widget(self.submit_button)
         self.layout.add_widget(back_button)
         self.add_widget(self.layout)
+
+    def on_enter(self):
+        super().on_enter()
+        self.filename_label.text = ''
 
     def choose_photo(self, instance):
         self.file_chooser = FileChooserListView(filters=['*.jpg', '*.jpeg', '*.png'])
@@ -223,7 +219,6 @@ class UploadPage(Screen):
 
 
     def process_image(self, selected_file):
-
         with open(selected_file, 'rb') as file:
             selected_file = file.read()
 
@@ -231,6 +226,7 @@ class UploadPage(Screen):
             blocks = [] 
             blocks = face_detection(selected_file)
 
+            #TODO: save_path for android
             save_path = r"D:\downloads dump\test"  
             os.makedirs(save_path, exist_ok=True)  
 
@@ -247,13 +243,19 @@ class UploadPage(Screen):
             print(texture_features)
 
             # Send texture features to the server for classification
-            url = 'http://127.0.0.1:5000/process_features'  # Update URL with your server's address
+            url = 'http://127.0.0.1:5000/process_features'
+            # url = 'http://192.168.254.104:8080/process_features'  # Update URL with your server's address
             data = {'features': texture_features}
             response = requests.get(url, json=data)
 
             if response.status_code == 200:
-                prediction = response.json()['prediction']
-                self.manager.get_screen('result').prediction = prediction  # Set prediction property
+                prediction_data = response.json()  # Get the JSON response
+                prediction_value = prediction_data.get('prediction')[0] # Extract 'prediction' value from JSON
+                
+                result_page = self.manager.get_screen('result')
+                result_page.prediction = prediction_value
+                result_page.update_result_label_text()  
+
                 self.manager.current = 'result'
             else:
                 print("Error occurred while sending data to server.")
@@ -267,8 +269,8 @@ class UploadPage(Screen):
 class ResultPage(Screen):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+        self.layout = BoxLayout(orientation='vertical', spacing=dp(10))
         self.prediction = None # Variable to store prediction
-        layout = BoxLayout(orientation='vertical', spacing=dp(10))
 
         title_label = Label(
             text=format_text('Result', color=BLACK, size=LARGE_SIZE),
@@ -277,50 +279,77 @@ class ResultPage(Screen):
             markup=True
         )
 
-        # Use self.prediction to determine result_label_text
-        if self.prediction == 0:
-            result_label_text = "User is classified as not Type 2 diabetic"
-        elif self.prediction == 1:
-            result_label_text = "User is classified as possibly Type 2 diabetic. Please consult a doctor to verify diagnosis."
-        else:
-            result_label_text = "Classification result unknown"
-
-        result_label = MDLabel(
-            text=result_label_text,
+        self.result_label = MDLabel(
+            text=self.get_result_label_text(),
             font_style='Body1',
             size_hint_y=None,
             height=dp(100)
         )
-
         ok_button = MDRaisedButton(
-            text='OK',
+            text=format_text('OK', color=WHITE),
             size_hint=(None, None),
-            size=(dp(120), dp(50)),
-            md_bg_color=(0.6, 0.8, 1, 1),
+            size=(dp(200), dp(50)),
+            pos_hint={'center_x': 0.5, 'center_y': 1},  
+            md_bg_color=GREEN,
             on_release=self.go_to_title
         )
+        
+        self.layout.add_widget(title_label)
+        self.layout.add_widget(self.result_label)
+        self.layout.add_widget(ok_button)
+        self.add_widget(self.layout)
 
-        layout.add_widget(title_label)
-        layout.add_widget(result_label)
-        layout.add_widget(ok_button)
-        self.add_widget(layout)
+
+    def get_result_label_text(self):
+        print(f"Prediction type in get_result_label_text: {type(self.prediction)}")
+        print(f"Prediction value in get_result_label_text: {self.prediction}") 
+        if self.prediction is None:
+            return "Classification result unknown"
+        elif self.prediction == 0:
+            return "User is classified as not Type 2 diabetic"
+        elif self.prediction == 1:
+            return "User is classified as possibly Type 2 diabetic. Please consult a doctor to verify diagnosis."
+        else:
+            return "Invalid prediction value"
+
+    def update_result_label_text(self):
+        self.result_label.text = self.get_result_label_text()
 
     def go_to_title(self, instance):
+        result_screen = self.manager.get_screen('result')
+        result_screen.clear_uploadimage()
         self.manager.current = 'title'
 
-    def set_result_label_text(self, text):
-        self.result_label.text = text
+    def clear_uploadimage(self):
+        # Reset image_data to None and disable submit button in UploadPage
+        upload_page = self.manager.get_screen('upload')
+        upload_page.image_data = None
+        upload_page.submit_button.disabled = True
 
+        # Delete the photos created within process_image to ensure data confidentiality
+        save_path = r"D:\downloads dump\test"
+        if os.path.exists(save_path):  # Check if the directory exists
+            for filename in os.listdir(save_path):
+                file_path = os.path.join(save_path, filename)
+                try:
+                    os.remove(file_path)  # Remove the file
+                except Exception as e:
+                    print(f"Error deleting {file_path}: {e}")
+
+                    
 class MyApp(MDApp):
     def build(self):
+        # Window.size = (720, 1600)
         Window.size = (360, 640)
         sm = ScreenManager()
+
         sm.add_widget(TitlePage(name='title'))
         sm.add_widget(ConsentPage(name='consent'))
         sm.add_widget(UploadPage(name='upload'))
         sm.add_widget(ResultPage(name='result'))
-    
+        
         # Create a BoxLayout with a light gray background
+        # root = BoxLayout(orientation='vertical', size=(720, 1600))
         root = BoxLayout(orientation='vertical', size=(360, 640))
         with root.canvas.before:
             Color(0.9, 0.9, 0.9, 1)  # Set the color to light gray
@@ -333,12 +362,7 @@ class MyApp(MDApp):
     def update_rect(self, instance, value):
         self.rect.size = instance.size
         self.rect.pos = instance.pos
-    
-    def set_prediction_result(self, prediction):
-        result_page = self.root.get_screen('result')
-        result_page.set_result_label_text(prediction)
 
-    
 
 if __name__ == '__main__':
     LabelBase.register(name='FreeSansBold', fn_regular=r'C:\Users\ASUS\OneDrive\Documents\diabetes app\assets\fonts\FreeSansBold.ttf')

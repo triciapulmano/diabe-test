@@ -93,7 +93,7 @@ def visualize_facial_landmarks(image, shape, colors=None, alpha=0.75):
 
 # initialize dlib's face detector (HOG-based) and then create the facial landmark predictor
 detector = dlib.get_frontal_face_detector()
-predictor = dlib.shape_predictor(r"D:\diabetes app\src\app\shape_predictor_68_face_landmarks (1).dat")
+predictor = dlib.shape_predictor(r"D:\diabetes-app\src\app\shape_predictor_68_face_landmarks (1).dat")
 
 def block_extraction(point, img):
     blocks = []
@@ -103,21 +103,6 @@ def block_extraction(point, img):
     width = height
 
     nose = img[int(point[29][1]-(height/2)):int(point[29][1]+(height/2)), int(point[29][0]-(width/2)):int(point[29][0]+(width/2))]
-
-    """
-    # right cheek
-    # point[46] x-coordinate of center 
-    r_centery = int(point[45][1]) + int(height / 0.9)
-    r_centerx = int(point[45][0])
-
-    # Calculate the integer values for slicing indices
-    r_left = r_centerx - int(width / 2)
-    r_right = r_centerx + int(width / 2)
-    r_top = r_centery - int(height / 2)
-    r_bottom = r_centery + int(height / 2)
-
-    right = img[r_top:r_bottom, r_left:r_right]
-    """
 
     # left cheek, point[41] x-coordinate of center
     l_centery = int(point[37][1]) + int(height / 0.7)
